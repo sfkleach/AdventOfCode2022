@@ -1,6 +1,5 @@
 from machine import *
 
-
 def part2( fname ):
     m = Machine( readSignalProgram( fname ) )
     for row in range( 0, 6 ):

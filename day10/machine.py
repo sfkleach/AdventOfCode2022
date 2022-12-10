@@ -3,18 +3,26 @@ import abc
 class Machine:
 
     def __init__( self, instructions ):
+        # The single X register.
         self._x = 1
+        # A count of completed work cycles. Note this is less than the notion 
+        # of "during a cycle".
         self._cycles_completed = 0
+        # Virtual program counter.
         self._pc = 0
+        # A vector of instructions that is expanded into single tick instructions.
+        # [It could actually be an instruction stream, given we have no backward jumps.]
         self._instructions = tuple( insertTimingNoops( instructions ) )
 
     def tick( self ):
+        """Load an instruction, bump the virtual program counter and cycle count, execute the instruction"""
         inst = self._instructions[ self._pc ]
         self._pc += 1
         self._cycles_completed += 1
         inst.run( self )
 
     def runTo( self, start_of_cycle ):
+        """Run until a particular clock value is reached/exceeded."""
         while self.atStartOfCycle() < start_of_cycle:
             self.tick()
 
@@ -25,16 +33,26 @@ class Machine:
         return self._cycles_completed + 1
 
     def vram( self, N ):
-        """video ram value = is the sprite pixel at position N on?"""
+        """
+        No need to implement an virtual VRAM. It's enough to dynamically 
+        compute the value True/False.
+        video ram value at N = Is the sprite pixel at position N on?
+        """
         return abs( self._x - N ) <= 1
 
     def noop( self ):
+        """These are the visitor callbacks."""
         pass
 
     def add( self, n ):
+        """These are the visitor callbacks."""
         self._x += n
 
 class Instruction:
+    """
+    Instructions follow the Visitor pattern. They also know how to
+    expand themselves into a sequence of single-tick instructions.
+    """
 
     @abc.abstractmethod
     def run( self, a_mc ): ...
@@ -61,6 +79,7 @@ class AddInstruction( Instruction ):
         return f"ADD({self._n})"
 
     def __iter__( self ):
+        """Insert a no-op to simulate the effect of an add taking two ticks."""
         yield NoopInstruction()
         yield self
 
@@ -69,6 +88,12 @@ class AddInstruction( Instruction ):
 
 
 def insertTimingNoops( instructions ):
+    """
+    To avoid dealing with multi-tick instructions I insert no-ops in
+    front of 2-tick add instructions. This works fine as there are no jumps or
+    microcode loops in this instruction set. In effect this converts the 
+    instruction set into single tick instructions.
+    """
     for inst in instructions:
         yield from inst
 
