@@ -4,12 +4,12 @@ class Machine:
 
     def __init__( self, instructions ):
         # The single X register.
-        self._x = 1
+        self._x: int= 1
         # A count of completed work cycles. Note this is less than the notion 
         # of "during a cycle".
-        self._cycles_completed = 0
+        self._cycles_completed: int = 0
         # Virtual program counter.
-        self._pc = 0
+        self._pc: int = 0
         # A vector of instructions that is expanded into single tick instructions.
         # [It could actually be an instruction stream, given we have no backward jumps.]
         self._instructions = tuple( insertTimingNoops( instructions ) )
@@ -26,19 +26,19 @@ class Machine:
         while self.atStartOfCycle() < start_of_cycle:
             self.tick()
 
-    def signalStrength( self ):
+    def signalStrength( self ) -> int:
         return self._x * self.atStartOfCycle()
 
-    def atStartOfCycle( self ):
+    def atStartOfCycle( self ) -> int:
         return self._cycles_completed + 1
 
-    def vram( self, N ):
+    def vram( self, N ) -> str:
         """
         No need to implement an virtual VRAM. It's enough to dynamically 
-        compute the value True/False.
-        video ram value at N = Is the sprite pixel at position N on?
+        compute the value since it is only 3 '#'s in a row.
+        video ram value at N = Is the sprite pixel # or .?
         """
-        return abs( self._x - N ) <= 1
+        return '#' if abs( self._x - N ) <= 1 else '.'
 
     def noop( self ):
         """These are the visitor callbacks."""

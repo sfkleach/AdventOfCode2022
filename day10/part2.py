@@ -4,7 +4,7 @@ def part2( fname ):
     m = Machine( readSignalProgram( fname ) )
     for row in range( 0, 6 ):
         for col in range( 0, 40 ):
-            print( '#' if m.vram( col ) else '.', end='' )
+            print( m.vram( col ), end='' )
             m.tick()
         print()
 
