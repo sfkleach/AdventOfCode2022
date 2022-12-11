@@ -65,7 +65,11 @@ class MonkeyGame:
     def __init__( self, monkeys, relief_factor=1 ):
         self._monkeys = monkeys
         self._relief_factor = relief_factor
-        self._relief_base = product( m.divisor() for m in monkeys )
+        self._relief_base = product( m.divisor() for m in monkeys.values() )
+
+    def monkeys( self ):
+        # Relies on the stable sort of Python's dictionaries.
+        return self._monkeys.values()
 
     def turn( self, monkey ):
         relief = lambda w: (w // self._relief_factor) % self._relief_base
@@ -75,16 +79,17 @@ class MonkeyGame:
             self._monkeys[ dst ].pushItem( item )
 
     def round( self ):
-        for m in self._monkeys:
+        for m in self.monkeys():
             self.turn( m )
 
     def status( self ):
-        for m in self._monkeys:
+        for m in self.monkeys():
             m.status()
 
     def monkeyBusinessLevel( self ):
-        ( *_, a, b ) = sorted( [ m.inspectionCount() for m in self._monkeys ] ) 
+        ( *_, a, b ) = sorted( [ m.inspectionCount() for m in self.monkeys() ] ) 
         return a * b
+
 
 ### readMonkeyFile #############################################################
 
@@ -156,10 +161,11 @@ def _readAllMonkeys( lines ):
         yield monkey
 
 def readMonkeyFile( fname ):
-    """Returns a list of freshly initialised monkeys in order"""
+    """Returns a suitably ordered dictionary of freshly initialised monkeys."""
     monkeys = {}
     with open( fname, 'r' ) as file:
         lines = Pushable( iter( file ) )
         for m in _readAllMonkeys( lines ):
             monkeys[ m.monkeyNumber() ] = m
-    return tuple( monkeys[n] for n in range( 0, len( monkeys ) ) )
+    # return tuple( monkeys[n] for n in range( 0, len( monkeys ) ) )
+    return { k: monkeys[k] for k in sorted( monkeys.keys() ) }
