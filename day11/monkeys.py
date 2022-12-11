@@ -1,12 +1,14 @@
 import re
-from pushable import Pushable
 from collections import deque
+
 from product import product
+from pushable import Pushable
+
 
 class Item:
 
     def __init__( self, worry ):
-        self.worry = worry
+        self.worry = worry                  # PUBLIC
 
     def __repr__( self ):
         return f'<{self.worry}>'
@@ -26,10 +28,10 @@ class Monkey:
         self._items = deque( map( Item, items ) )
         self._inspection_count: int = 0
 
-    def monkeyNumber( self ):
+    def monkeyNumber( self ) -> int:
         return self._monkey_number
 
-    def popItem( self ):
+    def popItem( self ) -> Item:
         try:
             return self._items.popleft()
         except IndexError:
@@ -42,7 +44,7 @@ class Monkey:
         self._inspection_count += 1
         item.worry = relief( self._operation( item.worry ) )
 
-    def throwDecision( self, item ):
+    def throwDecision( self, item ) -> int:
         if item.worry % self._divisor == 0:
             return self._if_true
         else:
@@ -53,10 +55,10 @@ class Monkey:
         print( f'Monkey {self._monkey_number}: {s}' )
         print( f'Monkey {self._monkey_number} inspected items {self._inspection_count} times.' )
 
-    def inspectionCount( self ):
+    def inspectionCount( self ) -> int:
         return self._inspection_count
 
-    def divisor( self ):
+    def divisor( self ) -> int:
         return self._divisor
 
 
@@ -86,7 +88,7 @@ class MonkeyGame:
         for m in self.monkeys():
             m.status()
 
-    def monkeyBusinessLevel( self ):
+    def monkeyBusinessLevel( self ) -> int:
         ( *_, a, b ) = sorted( [ m.inspectionCount() for m in self.monkeys() ] ) 
         return a * b
 
