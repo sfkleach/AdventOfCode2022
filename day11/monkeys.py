@@ -95,24 +95,24 @@ class MonkeyGame:
 
 ### readMonkeyFile #############################################################
 
-def getIntsGenerator( line ):
+def _getIntsGenerator( line ):
     for w in re.sub( '[,:]', ' ', line ).split():
         try:
             yield int( w )
         except:
             pass
 
-def getIntTuple( line ):
-    return tuple( getIntsGenerator( line ) )
+def _getIntTuple( line ):
+    return tuple( _getIntsGenerator( line ) )
 
-def getInt( line ):
-    return next( getIntsGenerator( line ) )
+def _getInt( line ):
+    return next( _getIntsGenerator( line ) )
 
 def _readMonkeyNumber( line ):
-    return getInt( line )
+    return _getInt( line )
 
 def _readStartingItems( line ):
-    return getIntTuple( line )
+    return _getIntTuple( line )
 
 def _makeOperation( op, src ):
     if src == "old":
@@ -132,7 +132,7 @@ def _readOperation( line ):
     return _makeOperation( op, src )
   
 def _readTest( lines ):
-    return tuple( getInt( line ) for line in lines )
+    return tuple( _getInt( line ) for line in lines )
 
 def _tryReadMonkey( lines ):
     L = tuple( islice( lines, 7 ) )
