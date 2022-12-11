@@ -1,8 +1,8 @@
 import re
 from collections import deque
+from itertools import islice
 
 from product import product
-from pushable import Pushable
 
 
 class Item:
@@ -95,22 +95,24 @@ class MonkeyGame:
 
 ### readMonkeyFile #############################################################
 
-def _readMonkeyNumber( lines ):
-    line = next( lines )
-    m = re.match( 'Monkey ([0-9]+):', line )
-    # print( 'line', line, m is None, 'end' )
-    assert m is not None, f'Unexpected line: {line}'
-    return int( m[1] )
-
-def _readStartingItems( lines ):
-    line = next( lines )
-    words = line.split()
-    assert words[0] == "Starting"
-    for w in words:
+def getIntsGenerator( line ):
+    for w in re.sub( '[,:]', ' ', line ).split():
         try:
-            yield int( w.replace( ',', '' ) )
+            yield int( w )
         except:
             pass
+
+def getIntTuple( line ):
+    return tuple( getIntsGenerator( line ) )
+
+def getInt( line ):
+    return next( getIntsGenerator( line ) )
+
+def _readMonkeyNumber( line ):
+    return getInt( line )
+
+def _readStartingItems( line ):
+    return getIntTuple( line )
 
 def _makeOperation( op, src ):
     if src == "old":
@@ -123,39 +125,22 @@ def _makeOperation( op, src ):
     elif op == "*":
         return lambda old: old * source( old )
 
-def _readOperation( lines ):
-    line = next( lines )
+def _readOperation( line ):
     m = re.match( r'[\s\t]+Operation: new = old (.*)', line )
     assert m is not None, f'Unexpected line: {line}'
-    words = m[1].split()
-    assert len( words ) == 2
-    return _makeOperation( *words )
+    ( op, src ) = m[1].split()
+    return _makeOperation( op, src )
   
 def _readTest( lines ):
-    line = next( lines )
-    m = re.match( r'[\s\t]+Test: divisible by (.+)', line )    
-    assert m is not None, f'Unexpected line: {line}'
-    words = m[1].split()
-    assert len(words) == 1, f'Unexpected line: {line}'
-    divisor = int( words[0] )
-    line = next( lines )
-    assert re.match( r'[\s\t]+If true:', line )
-    if_true = int( line.split()[-1] )
-    line = next( lines )
-    assert re.match( r'[\s\t]+If false:', line )
-    if_false = int( line.split()[-1] )
-    return ( divisor, if_true, if_false )
+    return tuple( getInt( line ) for line in lines )
 
 def _tryReadMonkey( lines ):
-    # Skip blank lines
-    while lines and lines.peek() == '\n':
-        next(lines)
-    # Return None if there are no more Monkeys in the file.
-    if lines:
-        mn = _readMonkeyNumber( lines )
-        items = tuple( _readStartingItems( lines ) )
-        operation = _readOperation( lines )
-        test = _readTest( lines )
+    L = tuple( islice( lines, 7 ) )
+    if L:
+        mn = _readMonkeyNumber( L[0] )
+        items = _readStartingItems( L[1] )
+        operation = _readOperation( L[2] )
+        test = _readTest( L[3:6] )
         return Monkey( num=mn, items=items, operation=operation, test=test )
 
 def _readAllMonkeys( lines ):
@@ -166,7 +151,7 @@ def readMonkeyFile( fname ):
     """Returns a suitably ordered dictionary of freshly initialised monkeys."""
     monkeys = {}
     with open( fname, 'r' ) as file:
-        lines = Pushable( iter( file ) )
+        lines = iter( file )
         for m in _readAllMonkeys( lines ):
             monkeys[ m.monkeyNumber() ] = m
     # return tuple( monkeys[n] for n in range( 0, len( monkeys ) ) )
