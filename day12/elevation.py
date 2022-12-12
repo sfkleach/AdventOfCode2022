@@ -1,3 +1,31 @@
+from collections import deque
+
+class Routes:
+
+    def __init__( self, start, end ):
+        self._found = { start: ( None, 0 ) }
+        self._end = end
+
+    def shouldContinue( self ):
+        return self._end not in self._found
+
+    def tryAdd( self, src_rc, dst_rc ):
+        ( _, dist ) = self._found[ src_rc ]
+        dist1 = dist + 1
+        rcd = ( src_rc, dist1 )
+        try:
+            ( _, prev_dist ) = self._found[ dst_rc ]
+            if prev_dist > dist1:
+                self._found[ dst_rc ] = rcd
+        except KeyError:
+            self._found[ dst_rc ] = rcd
+            return True
+        return None
+
+    def length( self ):
+        return self._found[ self._end ][1]
+
+
 
 class Elevation:
 
@@ -24,7 +52,6 @@ class Elevation:
 
     def at( self, rowcol ):
         ( row, col ) = rowcol
-        # print( 'at', rowcol )
         try:
             if row >= 0 and col >= 0:
                 return self._rows[ row ][ col ]
@@ -48,42 +75,22 @@ class Elevation:
         h = self.at( rowcol )
         for rc in self.neighbours( rowcol ):
             h1 = self.at( rc )
-            # print( 'check', rc, h, h1 )
             if h1 is not None and h1 <= h + 1:
                 yield rc
 
     def shortestPath( self ):
-        found = { self._start: ( None, 0 ) }
-        sofar = [ ( self._start, 0 ) ]
-        while sofar and self._end not in found:
-            ( rowcol, dist ) = sofar.pop()
-            # print( 'consider', rowcol )
+        routes = Routes( self._start, self._end )
+        sofar = deque( [ self._start ] )
+        while sofar and routes.shouldContinue():
+            rowcol = sofar.popleft()
             for rc in self.canReach( rowcol ):
-                # print( 'neighbour', rc )
-                dist1 = dist + 1
-                if rc not in found:
-                    # print('new', f'{rowcol} -> {rc}' )
-                    found[ rc ] = ( rowcol, dist1 )
-                    sofar.append( ( rc, dist + 1 ) )
-                elif found[ rc ][1] > dist1:
-                    # print('old', f'{rowcol} -> {rc}', rc, found[rc], dist1 )
-                    found[ rc ] = ( rowcol, dist1 )
-        return found[ self._end ][1]
-        # if self._end in found:
-        #     route = []
-        #     rc = self._end
-        #     while rc is not None:
-        #         # print( 'route', rc )
-        #         (rc, d) = found[ rc ]
-        #         if rc is None:
-        #             break
-        #         route.append( (rc, d, chr( self.at( rc ) + ord('a') ) ) )
-        #     return route
+                if routes.tryAdd( rowcol, rc ):
+                    sofar.append( rc )
+        return routes.length()
 
     def show( self ):
         for row in self._rows:
             print( ''.join( chr( i + ord( 'a' ) ) for i in row ) )
-
 
 
 def readElevationFile( fname ):

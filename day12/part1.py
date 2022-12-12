@@ -5,4 +5,4 @@ def part1( fname ):
     print( e.shortestPath() )
 
 if __name__ == "__main__":
-    part1( 'test.txt' )
+    part1( 'input.txt' )
