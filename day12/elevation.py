@@ -1,6 +1,13 @@
 from collections import deque
 
 class Routes:
+    """
+    This class encapsulates the chain of steps in the format:
+        Map< Location, ( previous_location: Location?, distance_travelled: int ) >
+    For simplicity I set the previous location to the start to be None. Since
+    we do not actually report on the path, I could simply have used a 
+        Map< Location, distance_travelled: int >
+    """
 
     def __init__( self, start, end ):
         self._found = { start: ( None, 0 ) }
@@ -10,6 +17,11 @@ class Routes:
         return self._end not in self._found
 
     def tryAdd( self, src_rc, dst_rc ):
+        """
+        src_rc = source row&col
+        dst_rc = destination row&col
+        Returns True iff the dst_rc was not previously visited.
+        """
         ( _, dist ) = self._found[ src_rc ]
         dist1 = dist + 1
         rcd = ( src_rc, dist1 )
@@ -23,7 +35,7 @@ class Routes:
         return None
 
     def length( self ):
-        return self._found[ self._end ][1]
+        return self._found[ self._end ][1]  # [1] selects the distance.
 
 
 
@@ -51,26 +63,27 @@ class Elevation:
         self._rows.append( row )
 
     def at( self, rowcol ):
+        """
+        Returns the elevation at a row&col pair. The location must be within
+        bounds.
+        """
         ( row, col ) = rowcol
-        try:
-            if row >= 0 and col >= 0:
-                return self._rows[ row ][ col ]
-            else:
-                return None
-        except IndexError:
-            return None
+        return self._rows[ row ][ col ]
 
-    @staticmethod
-    def neighbours( rowcol ):
+    def neighbours( self, rowcol ):
+        """Generates the possible neighbours of a row&col pair."""
         ( row, col ) = rowcol
-        yield ( row+1, col )
+        if row + 1 < len( self._rows ):
+            yield ( row+1, col )
         if row > 0:
             yield ( row-1, col )
-        yield ( row, col+1 )
+        if col + 1 < len( self._rows[row] ):
+            yield ( row, col+1 )
         if col > 0:
             yield ( row, col-1 )
 
     def canReach( self, rowcol ):
+        """Generates the reachable neighbours of a row&col pair."""
         ( row, col ) = rowcol
         h = self.at( rowcol )
         for rc in self.neighbours( rowcol ):
@@ -79,18 +92,30 @@ class Elevation:
                 yield rc
 
     def shortestPath( self ):
-        routes = Routes( self._start, self._end )
-        sofar = deque( [ self._start ] )
+        return self.shortestPathFrom( self._start )
+
+    def shortestPathFrom( self, start ):
+        """
+        Effectively this is Dijkstra's algorithm, although I just use a straight
+        breath-first search rather than a priority queue (all weights are 1).
+        """
+        routes = Routes( start, self._end )
+        sofar = deque( [ start ] )                # Use a deque for breaths-first search - pop from front but add to back.
         while sofar and routes.shouldContinue():
             rowcol = sofar.popleft()
             for rc in self.canReach( rowcol ):
                 if routes.tryAdd( rowcol, rc ):
                     sofar.append( rc )
-        return routes.length()
+        if sofar:
+            return routes.length()
 
-    def show( self ):
-        for row in self._rows:
-            print( ''.join( chr( i + ord( 'a' ) ) for i in row ) )
+    def findZeroElevations( self ):
+        """Generates the locations with a zero elevation."""
+        for nrow in range( 0, len( self._rows ) ):
+            for ncol in range( 0, len( self._rows[nrow] ) ):
+                rc = ( nrow, ncol )
+                if self.at( rc ) == 0:
+                    yield rc
 
 
 def readElevationFile( fname ):
