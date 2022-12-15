@@ -7,17 +7,19 @@ from vector import Vector
 class Sensor:
 
     def __init__( self, x, y, bx, by ):
-        self._xy = Vector( x, y )
-        self._bxy = Vector( bx, by )
+        self._x = x
+        self._y = y
+        self._bxy = ( bx, by )
+        self._radius = abs( x - bx ) + abs( y - by )
 
     def radius( self ):
-        return ( self._xy - self._bxy ).manhattan()
+        return self._radius
 
     def x( self ):
-        return self._xy.x()
+        return self._x
 
     def y( self ):
-        return self._xy.y()
+        return self._y
 
     def beacon( self ):
         return self._bxy
@@ -86,8 +88,8 @@ class SensorArray:
     def beacons( self, line_y ):
         for sensor in self._sensors:
             bxy = sensor.beacon()
-            if bxy.y() == line_y:
-                yield bxy.x()
+            if bxy[1] == line_y:
+                yield bxy[0]
     
 
 def readSensorArrayFile( fname ):
