@@ -21,16 +21,7 @@ class Sensor:
 
     def beacon( self ):
         return self._bxy
-
-
-def tryMergeRanges( r1, r2 ):
-    if r1.stop < r2.start:
-        [ r1, r2 ]
-    elif r2.stop < r1.start:
-        [ r2, r1 ]
-    else:
-        [ range( min( r1.start, r2.start ), max( r1.stop, r2.stop ) ) ]
-        
+       
 
 class InAnyOf:
 
