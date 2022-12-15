@@ -9,12 +9,12 @@ def part2( fname, lo, hi ):
             # Progress indicator.
             print( 'N', n )
         I = A.intersect( y )
-        if not I.covers( range( lo, hi ) ):
+        diff = P.closedopen( lo, hi ) - I
+        if diff:
             # We have the y-coordinate. Now to extract the x-coordinate. Assume unique answer.
-            for x in range( lo, hi ):
-                if x not in I:
-                    print( x, y, x * 4000000 + y )
-                    return
+            x = next( P.iterate( diff, step=1 ) )
+            print( x, y, x * 4000000 + y )
+            return
 
 if __name__ == "__main__":
     # part2( 'test.txt', 0, 20 )          # 56000011

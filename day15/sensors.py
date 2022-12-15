@@ -2,6 +2,7 @@ import re
 from collections import deque
 
 from vector import Vector
+import portion as P
 
 
 class Sensor:
@@ -87,16 +88,22 @@ class SensorArray:
             delta = r - dy
             if delta >= 0:
                 # print( sensor.x(), sensor.y(), sensor.radius(), delta, 2 * delta + 1 )
-                yield range( sensor.x() - delta, sensor.x() + delta + 1 )
+                yield P.closedopen( sensor.x() - delta, sensor.x() + delta + 1 )
 
     def intersect( self, line_y ):
-        return InAnyOf( self._intersect( line_y ) )
+        portion = P.empty()
+        for p in self._intersect( line_y ):
+            portion |= p
+        return portion
 
     def beacons( self, line_y ):
+        portion = P.empty()
         for sensor in self._sensors:
             bxy = sensor.beacon()
             if bxy.y() == line_y:
-                yield bxy.x()
+                x = bxy.x()
+                portion |= P.closed( x, x )
+        return portion
     
 
 def readSensorArrayFile( fname ):
