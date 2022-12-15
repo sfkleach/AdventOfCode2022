@@ -1,4 +1,5 @@
 import re
+from collections import deque
 
 from vector import Vector
 
@@ -34,15 +35,15 @@ def tryMergeRanges( r1, r2 ):
 class InAnyOf:
 
     def __init__( self, ranges ):
-        self._ranges = ()   # Sorted disjoint ranges.
+        self._ranges = tuple()   # Main as sorted disjoint ranges.
         for r in ranges:
             # print( 'RANGE', self._ranges )
-            self._ranges = tuple( self._addRange( r, self._ranges ) )
+            self._ranges = tuple( self._addRange( r ) )
 
-    def _addRange( self, new_range, ranges ):
+    def _addRange( self, new_range ):
+        ranges = deque( self._ranges )
         while ranges:
-            r = ranges[0]
-            ranges = ranges[1:]
+            r = ranges.popleft()
             if r.stop < new_range.start:
                 yield r
             elif new_range.stop < r.start:
