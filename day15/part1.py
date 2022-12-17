@@ -9,4 +9,4 @@ def part1( fname, line ):
 
 if __name__ == "__main__":
     # part1( 'test.txt', 10 )       # 26
-    part1( 'input.txt', 2000000 )   # 4861076
+    part1( 'input.txt', 2000000 )

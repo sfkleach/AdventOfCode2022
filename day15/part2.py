@@ -18,4 +18,4 @@ def part2( fname, lo, hi ):
 
 if __name__ == "__main__":
     # part2( 'test.txt', 0, 20 )          # 56000011
-    part2( 'input.txt', 0, 4000000 )    # 10649103160102
+    part2( 'input.txt', 0, 4000000 )
