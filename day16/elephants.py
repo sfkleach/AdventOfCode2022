@@ -37,27 +37,6 @@ class SearchStatus:
             self._best_possible = self._score + sum( m * v.rate for ( m, v ) in zip( self._getCountdown(), self._unopened.values() ) )
         return self._best_possible
 
-    def __lt__( self, other ):
-        return self._score < other._score
-
-    def __le__( self, other ):
-        return self._score <= other._score
-
-    def __gt__( self, other ):
-        return self._score > other._score
-
-    def __ge__( self, other ):
-        return self._score >= other._score
-
-    def __eq__( self, other ):
-        return self._score == other._score
-
-    def __ne__( self, other ):
-        return self._score != other._score
-
-    def __lt__( self, other ):
-        return self._score < other._score
-
     def isSolution( self ):
         return self._countdown <= 0
 
@@ -102,8 +81,8 @@ class SearchStatus:
 
 class Search:
 
-    def __init__( self, start, valves ):
-        self._Q = [ SearchStatus( start, None, valves, 30, 0 ) ]
+    def __init__( self, *, valves, start_name, countdown ):
+        self._Q = [ SearchStatus( valves[ start_name ], None, valves, countdown, 0 ) ]
         self._high_score = 0
         self._best = None
 
@@ -135,8 +114,8 @@ class Cave:
     def __init__( self, valve_map ):
         self._valves = valve_map
 
-    def newSearch( self, start ):
-        return Search( self._valves[start], self._valves )
+    def newSearch( self, start, countdown ):
+        return Search( start_name=start, valves=self._valves, countdown=countdown )
 
 def newCave( valve_tuples ):
     valves = tuple( valve_tuples )
