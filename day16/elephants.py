@@ -15,10 +15,9 @@ class Valve:
 
 class SearchStatus:
 
-    def __init__( self, valve, visited, unopened_valves, countdown, score ):
+    def __init__( self, valve, unopened_valves, countdown, score ):
         self._countdown = countdown
         self._at = valve
-        self._visited = visited
         self._unopened = unopened_valves
         self._score = score
         self._best_possible = None
@@ -30,9 +29,6 @@ class SearchStatus:
             n -= 2
 
     def bestPossible( self ):
-        # print( *self._unopened.items() )
-        # for ( m, v ) in zip( self._getCountdown(), self._unopened.values() ):
-        #     print( f'{m} * {v.rate} -> {m * v.rate}' )
         if self._best_possible is None:
             self._best_possible = self._score + sum( m * v.rate for ( m, v ) in zip( self._getCountdown(), self._unopened.values() ) )
         return self._best_possible
@@ -53,36 +49,32 @@ class SearchStatus:
             linked_list = rest
             yield t
 
-    def visited( self ):
-        return tuple( self._genVisited() )
-
     def options( self ):
         if self._countdown <= 0:
             return
         new_countdown = self._countdown - 1
         if self._at.name in self._unopened and self._at.rate > 0:
             # Open valve.
-            # print( 'open' )
             new_unopened = self._unopened.copy()
             del new_unopened[ self._at.name ]
             new_score = self._score + self._at.rate * max( 0, self._countdown - 1 )
             # print( 'score', new_score )
             new_at = self._at
-            new_visited = ( ( "open", self._at ), self._visited )
-            yield SearchStatus( new_at, new_visited, new_unopened, new_countdown, new_score )
-        for n in self._at.neighbours:
-            # Move to a neighbour.
-            # print( 'move' )
-            new_unopened = self._unopened
-            new_score = self._score
-            new_at = n
-            new_visited = ( ( "move", new_at ), self._visited )
-            yield SearchStatus( new_at, new_visited, new_unopened, new_countdown, new_score )
+            yield SearchStatus( new_at, new_unopened, new_countdown, new_score )
+        if self._unopened:
+            for n in self._at.neighbours:
+                # Move to a neighbour.
+                new_unopened = self._unopened
+                new_score = self._score
+                new_at = n
+                yield SearchStatus( new_at, new_unopened, new_countdown, new_score )
+        else:
+            yield SearchStatus( self._at, self._unopened, 0, self._score )
 
 class Search:
 
     def __init__( self, *, valves, start_name, countdown ):
-        self._Q = [ SearchStatus( valves[ start_name ], None, valves, countdown, 0 ) ]
+        self._Q = [ SearchStatus( valves[ start_name ], valves, countdown, 0 ) ]
         self._high_score = 0
         self._best = None
 
