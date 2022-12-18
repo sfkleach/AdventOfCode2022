@@ -1,7 +1,7 @@
 from elephants import *
 
 def part1( fname ):
-    S = readElephantFile( fname ).newSearch( 'AA', 30 )
+    S = readElephantFile( fname ).newSearch( ['AA'], 30 )
     while S.canContinue():
         S.check()
     print( S.highScore() )
