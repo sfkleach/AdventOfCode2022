@@ -115,7 +115,7 @@ class SearchStatus:
     def score( self ):
         return self._score
 
-    def best_possible( self ):
+    def bestPossible( self ):
         if self._best_possible is None:
             timeslots_available = self._countdown - 1
             total = 0
@@ -128,31 +128,37 @@ class SearchStatus:
             self._best_possible = self._score + total
         return self._best_possible
 
-    def _genVisited( self ):
-        linked_list = self._visited
-        while linked_list:
-            ( t, rest ) = linked_list
-            linked_list = rest
-            yield t
-
     def worthOpening( self ):
         for ( goal_name, goal_valve ) in self._unopened.items():
             if goal_valve.rate > 0:
                 yield goal_name
 
-    def baseOptions( self, agent_number: Agent, ntick ):
+    def getClue( self, agent_number ):
         agent = self._agents[ agent_number ]
         currentName = agent.current_valve_name
-        currentValve = self._cave.valve( currentName )
-        new_countdown = self._countdown - ntick
-        if agent.isClueless():
-            for goal_name in self.worthOpening():
-                # print( 'goal', goal_name )
+        count = 0
+        for goal_name in self.worthOpening():
+            skip = False
+            for g in self._agents:
+                if g.goal_valve_name == goal_name:
+                    skip = True
+                    break
+            if not skip:
+                count += 1
                 new_agents = self._agents.copy()
                 new_agents[ agent_number ] = Agent( currentName, goal_name )
                 yield SearchStatus( new_agents, self._unopened, self._countdown, self._score, self._cave )        
-        elif agent.hasQuit():
-            yield SearchStatus( self._agents, self._unopened, new_countdown, self._score, self._cave )
+        if count == 0:
+            new_agents = self._agents.copy()
+            new_agents[ agent_number ] = Agent( currentName, None )
+            yield SearchStatus( new_agents, self._unopened, self._countdown, self._score, self._cave )             
+
+    def baseOptions( self, agent_number: int ):
+        agent = self._agents[ agent_number ]
+        currentName = agent.current_valve_name
+        currentValve = self._cave.valve( currentName )
+        if agent.hasQuit():
+            yield SearchStatus( self._agents, self._unopened, self._countdown, self._score, self._cave )
         elif agent.hasReachedGoal():
             # When the agent reaches the goal node it will open a valve and become clueless.
             if currentName not in self._unopened or currentValve.rate <= 0:
@@ -164,17 +170,18 @@ class SearchStatus:
             new_score = self._score + currentValve.rate * max( 0, self._countdown - 1 )
             new_agents = self._agents.copy()
             new_agents[ agent_number ] = Agent( currentName )
-            yield SearchStatus( new_agents, new_unopened, new_countdown, new_score, self._cave )             
+            yield SearchStatus( new_agents, new_unopened, self._countdown, new_score, self._cave )
         else:
             # Move the agent towards the goal, assuming it is still open.
             if agent.goal_valve_name in self._unopened:
                 next = self._cave.findShortestRoute( currentName, agent.goal_valve_name )
-                # print( 'moving', agent, 'via', next )
                 new_agents = self._agents.copy()
                 new_agents[ agent_number ] = Agent( next, agent.goal_valve_name )            
-                yield SearchStatus( new_agents, self._unopened, new_countdown, self._score, self._cave )
-            else:
-                raise Exception( 'Cannot happen in part1 ' )
+                yield SearchStatus( new_agents, self._unopened, self._countdown, self._score, self._cave )
+
+    def tick( self ):
+        self._countdown -= 1
+        return self
 
     def options( self ):
         if self._countdown <= 0:
@@ -182,18 +189,25 @@ class SearchStatus:
         if not self._unopened:
             return
         if len( self._agents ) == 1:
-            yield from self.baseOptions( 0, 1 )
+            if self._agents[0].isClueless():
+                yield from self.getClue( 0 )
+            else:
+                yield from ( s.tick() for s in self.baseOptions( 0 ) )
         elif len( self._agents ) == 2:
-            for s in self.baseOptions( 0, 1 ):
-                yield from s.baseOptions( 1, 0 )
+            if self._agents[0].isClueless():
+                yield from self.getClue( 0 )
+            elif self._agents[1].isClueless():
+                yield from self.getClue( 1 )
+            else:
+                for s in self.baseOptions( 0 ):
+                    yield from ( t.tick() for t in s.baseOptions( 1 ) )
 
     def merit( self ):
-        return self._score #( -self._passovers, self._score )
+        return self._score
 
     def __repr__( self ):
-        # print( len( self._agents ) )
         names = ':'.join( map( str, self._agents ) )
-        return f'{names}({self.merit()})'
+        return f'<at={names} merit={self.merit()} t={self._countdown}>'
 
 
 class Search:
@@ -210,18 +224,18 @@ class Search:
         return bool( self._Q )
 
     def check( self ):
-        # print( 'Q Length', len( self._Q ) )
         s = self._Q.pop()
-        # print( 'Popped', s )
         if s.score() > self._high_score:
             self._high_score = s.score()
             self._best = s
             # print( 'SOLUTION', s, s._countdown, [ v for ( n, v ) in s._unopened.items() if v.rate > 0 ] )
-        n = len( self._Q )
-        for t in s.options():
-            self._Q.append( t )
-        if len( self._Q ) > n:
-            self._Q.sort( key=lambda s: s.merit() )
+        if s.bestPossible() > self._high_score:
+            n = len( self._Q )
+            for t in s.options():
+                if t.bestPossible() > self._high_score:
+                    self._Q.append( t )
+            if len( self._Q ) > n:
+                self._Q.sort( key=lambda s: s.score() )
 
     def highScore( self ):
         return self._high_score
