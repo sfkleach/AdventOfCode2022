@@ -64,8 +64,10 @@ class Chamber:
     def highestPoint( self ):
         return self._highest + 1
 
-    def show( self ):
-        for r in reversed( self._rocks ):
+    def show( self, limit=-1 ):
+        for n, r in enumerate( reversed( self._rocks ) ):
+            if n == limit:
+                break
             print( f'|{"".join(r)}|' )
         print( f'+{self._width*"-"}+' )
     
@@ -129,6 +131,9 @@ class Chamber:
                         self._highest_in_col[ i ] = j
                     if j > self._highest:
                         self._highest = j
+        
+    def profile( self ):
+        return tuple( self._highest - n for n in self._highest_in_col )
 
 
 class Simulation:
@@ -137,23 +142,32 @@ class Simulation:
         self._chamber = Chamber()
         self._jets = deque( jets )
         self._falling_rocks = deque( ( ROCK1, ROCK2, ROCK3, ROCK4, ROCK5 ) )
+        self._njets = 0
+        self._nfalls = 0
         print( '#jets', len( self._jets ) )
         print( '#rocks', len( self._falling_rocks ) )
+        self._nsteps = 0
+
+    def signature( self ):
+        return ( self._njets, self._nfalls, self._chamber.profile() )
 
     def highestPoint( self ):
         return self._chamber.highestPoint()
 
     def nextRock( self ):
+        self._nfalls = ( self._nfalls + 1 ) % len( self._falling_rocks ) 
         r = self._falling_rocks.popleft()
         self._falling_rocks.append( r )
         return r
 
     def nextJet( self ):
+        self._njets = ( self._njets + 1 ) % len( self._jets ) 
         j = self._jets.popleft()
         self._jets.append( j )
         return j        
 
     def step( self ):
+        self._nsteps += 1
         rock = self.nextRock()
         self._chamber.insert( rock )
         while True:
@@ -171,13 +185,32 @@ class Simulation:
                 # print( 'petrify' )
                 self._chamber.petrify()
                 break
+
+    def cycle( self ):
+        while True:
+            before = self._njets
+            self.step()
+            if self._njets < before:
+                break
+
+    def detectLoop( self ):
+        self._signatures = {}
+        while True:
+            self.cycle()
+            sig = self.signature()
+            if sig in self._signatures:
+                ( old_nsteps, old_height ) = self._signatures[ sig ]
+                new_height = self._chamber.highestPoint()
+                return dict( steps_delta=self._nsteps - old_nsteps, signature=sig, start=old_nsteps, start_height=old_height, height_delta=new_height - old_height )
+            else:
+                self._signatures[ sig ] = ( self._nsteps, self._chamber.highestPoint() )
         
     def show( self ):
         self._chamber.show()
 
     def run( self, count ):
         for n in range( 0, count ):
-            if n % 100 == 0:
+            if n % 1000 == 0:
                 print( 'progress', n )
             self.step()
             
