@@ -56,14 +56,13 @@ class Chamber:
     def __init__( self, width=7 ):
         self._width = width
         self._rocks = []
+        self._highest_in_col = width * [ -1 ]
+        self._highest = -1
+        self._lo = 0
+        self._hi = 0
 
     def highestPoint( self ):
-        base = 0
-        for ( j, r ) in enumerate( self._rocks ):
-            for ch in r:
-                if ch != '.':
-                    base = j + 1
-        return base
+        return self._highest + 1
 
     def show( self ):
         for r in reversed( self._rocks ):
@@ -77,14 +76,21 @@ class Chamber:
 
     def insert( self, rock ):
         h = self.highestPoint() + 3
+        hi = 0
+        lo = h
         for ( i, j ) in rock.points():
             # print( i, j )
-            self.set( i + 2, h + j, '@' )
+            new_j = h + j
+            self.set( i + 2, new_j, '@' )
+            hi = max( hi, new_j )
+            lo = min( lo, new_j )
+        self._lo = lo
+        self._hi = hi + 1
 
     def canNudge( self, dx, dy ):
         erase = set()
         add = set()
-        for j in range( 0, len( self._rocks ) ):
+        for j in range( self._lo, self._hi ):
             for i in range( 0, self._width ):
                 if self._rocks[ j ][ i ] == '@':
                     try:
@@ -108,13 +114,21 @@ class Chamber:
                 self.set( x, y, '.' )
             for ( x, y ) in add:
                 self.set( x, y, '@' )
+            if dy < 0:
+                # Falling
+                self._lo -= 1
+                self._hi -= 1
         return m
 
     def petrify( self ):
-        for j in range( 0, len( self._rocks ) ):
+        for j in range( self._lo, self._hi ):
             for i in range( 0, self._width ):
                 if self._rocks[ j ][ i ] == '@':
                     self._rocks[ j ][ i ] = '#'
+                    if j > self._highest_in_col[ i ]:
+                        self._highest_in_col[ i ] = j
+                    if j > self._highest:
+                        self._highest = j
 
 
 class Simulation:
@@ -123,6 +137,11 @@ class Simulation:
         self._chamber = Chamber()
         self._jets = deque( jets )
         self._falling_rocks = deque( ( ROCK1, ROCK2, ROCK3, ROCK4, ROCK5 ) )
+        print( '#jets', len( self._jets ) )
+        print( '#rocks', len( self._falling_rocks ) )
+
+    def highestPoint( self ):
+        return self._chamber.highestPoint()
 
     def nextRock( self ):
         r = self._falling_rocks.popleft()
@@ -138,14 +157,18 @@ class Simulation:
         rock = self.nextRock()
         self._chamber.insert( rock )
         while True:
+            # self._chamber.show()
             j = self.nextJet()
             if j == "<":
+                # print( 'left' )
                 self._chamber.tryNudge( -1, 0 )
             elif j == ">":
+                # print( 'right' )
                 self._chamber.tryNudge( 1, 0 )
             else:
                 raise Exception( 'BAD INPUT' )
             if not self._chamber.tryNudge( 0, -1 ):
+                # print( 'petrify' )
                 self._chamber.petrify()
                 break
         
