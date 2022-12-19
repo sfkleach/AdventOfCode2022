@@ -41,6 +41,11 @@ class Droplet:
             return False
 
     def exterior( self ):
+        """
+        Put the droplet into a tank that's big enough for it. Then flood fill 
+        the tank with water. To count as an exterior surface it has to touch
+        water.
+        """
         ( alim, blim, clim ) = ( bounds := self.bounds() )
         enclosure = {}
         for cube in self._cubes:
