@@ -76,13 +76,13 @@ class Factory:
         if build:
             self._robots[ self._plan ] += 1
             if self._plan == 3:
-                self._score += max( 0, 24 - self._time )
+                self._score += max( 0, self._configuration.nticks - self._time )
             self._plan = None
 
     def oneStep( self ):
         if self._plan is not None:
             self.round()
-            if self._time <= 24:
+            if self._time <= self._configuration.nticks:
                 yield self
         else:
             for i in range( 0, 4 ):
@@ -96,7 +96,7 @@ class Factory:
                         c = self.copy()
                         c._plan = i
                         c.round()
-                        if c._time <= 24:
+                        if c._time <= self._configuration.nticks:
                             yield c
 
     def show( self ):
@@ -108,7 +108,7 @@ class Simulation:
     def __init__( self, factory ):
         self._Q = deque( [ factory.copy() ] )
         self._best = 0
-        self._best_factory = None
+        self._best_factory = factory
 
     def tick( self ):
         f = self._Q.pop()

@@ -10,6 +10,6 @@ def part1( fname ):
 
 
 if __name__ == "__main__":
-    part1( 'test.txt' )     # 33
+    # part1( 'test.txt' )     # 33
     # part1( 'ex2.txt' )
-    # part1( 'input.txt' )
+    part1( 'input.txt' )
