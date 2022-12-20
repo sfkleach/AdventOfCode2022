@@ -1,35 +1,36 @@
 import re
 from collections import deque
 
+class Blueprint:
+
+    def __init__( self, number, bluedata ):
+        self._number = number
+        self._bluedata = bluedata
+
+    def best( self ):
+        S = Simulation( Factory( bluedata=self._bluedata ) )
+        return S.run()
+
+    def quality( self ):
+        return self._number * self.best()
+
 class Factory:
 
-    def __init__( self ):
-        self._time = 0
-        self._robots = [1, 0, 0, 0]
-        self._stocks = [0, 0, 0, 0]
-        self._plan = None
-        self._blueprint = (
-            ( 4, 0, 0, 0 ),
-            ( 2, 0, 0, 0 ),
-            ( 3, 14, 0, 0 ),
-            ( 2, 0, 7, 0 )
-        )
-        self._limits = tuple( max( robreq[n] for robreq in self._blueprint ) for n in range( 0, 4 ) )
+    def __init__( self, *, factory=None, bluedata=None ):
+        self._time = factory and factory._time or 0
+        self._robots = factory and factory._robots.copy() or [1, 0, 0, 0]
+        self._stocks = factory and factory._stocks.copy() or [0, 0, 0, 0]
+        self._plan = factory and factory._plan
+        self._bluedata = factory and factory._bluedata or bluedata
+        self._limits = factory and factory._limits or tuple( max( robreq[n] for robreq in self._bluedata ) for n in range( 0, 4 ) )
 
     def copy( self ):
-        c = Factory()
-        c._time = self._time
-        c._robots = list( self._robots )
-        c._stocks = list( self._stocks )
-        c._plan = self._plan
-        c._blueprint = self._blueprint
-        c._limits = self._limits
-        return c
+        return Factory( factory=self )
     
     def round( self ):
         self._time += 1
         # Build a robot if possible.
-        requirements = self._blueprint[ self._plan ]
+        requirements = self._bluedata[ self._plan ]
         build = all( req <= got for ( req, got ) in zip( requirements, self._stocks ) )
         if build:
             for ( n, level ) in enumerate( self._stocks ):
@@ -48,12 +49,13 @@ class Factory:
             if self._time <= 24:
                 yield self
         else:
-            for i in reversed( range( 0, 4 ) ):
-                requirements = self._blueprint[ i ]
+            for i in range( 0, 4 ):
+                requirements = self._bluedata[ i ]
                 feasible = all( req == 0 or rob > 0 for ( req, rob ) in zip( requirements, self._robots ) )
                 # print( f'feasible to build {i}', [ req == 0 or rob > 0 for ( req, rob ) in zip( requirements, self._robots ) ], feasible )
                 if feasible:
                     desirable = i == 3 or ( self._robots[ i ] < self._limits[ i ] )
+                    # print( f'desireable to build {i}', i == 3, self._robots[ i ] < self._limits[ i ], desirable )
                     if desirable:
                         c = self.copy()
                         c._plan = i
@@ -72,7 +74,7 @@ class Simulation:
         geodes = f._stocks[3]
         if geodes > self._best:
             self._best = geodes
-            self.show()
+            # self.show()
         self._Q.extend( f.oneStep() )
         # self.show()
 
@@ -84,29 +86,34 @@ class Simulation:
     def run( self ):
         while self._Q:
             self.tick()
+        return self._best
+
+def readBlueprints( file ):
+    for line in file:
+        # print( line )
+        bp_words = line.split( 'Each' )
+        bp = []
+        for w in bp_words[1:]:
+            robreq = []
+            m = re.match( r'[^0-9]+costs ([^.]*)', w )
+            assert bool( m )
+            for item in m[1].split( ' and '):
+                ( n, mats ) = ( pair := item.split() )
+                # print( 'Pair', pair )
+                robreq.append( pair )
+            reqs = 4 * [ 0 ]
+            for ( i, mat) in enumerate( [ 'ore', 'clay', 'obsidian' ] ):
+                req = 0
+                for item in robreq:
+                    if item[1] == mat:
+                        reqs[ i ] = int( item[0] )
+            bp.append( tuple( reqs ) )
+        number = int( re.match( r'[^0-9]*([0-9]+)', bp_words[0] )[1] )
+        yield Blueprint( number, tuple( bp ) )
 
 def readBlueprintsFile( fname ):
     with open( fname, 'r' ) as file:
-        for line in file:
-            print( line )
-            bp_words = line.split( 'Each' )
-            bp = []
-            for w in bp_words[1:]:
-                robreq = []
-                m = re.match( r'[^0-9]+costs ([^.]*)', w )
-                assert bool( m )
-                for item in m[1].split( ' and '):
-                    ( n, mats ) = ( pair := item.split() )
-                    # print( 'Pair', pair )
-                    robreq.append( pair )
-                reqs = 4 * [ 0 ]
-                for ( i, mat) in enumerate( [ 'ore', 'clay', 'obsidian' ] ):
-                    req = 0
-                    for item in robreq:
-                        if item[1] == mat:
-                            reqs[ i ] = int( item[0] )
-                bp.append( tuple( reqs ) )
-            yield tuple( bp )
+        return tuple( readBlueprints( file ) )
 
 
                 
