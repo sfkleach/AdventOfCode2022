@@ -8,8 +8,9 @@ class Blueprint:
         self._bluedata = bluedata
         self._limits = tuple( max( robreq[n] for robreq in self._bluedata ) for n in range( 0, 4 ) )
 
-    def best( self ):
-        S = Simulation( Factory( bluedata=self._bluedata ) )
+    def calculateBest( self, nticks ):
+        C = self.configuration( nticks )
+        S = Simulation( Factory( configuration=C ) )
         return S.run()
 
     def quality( self ):
@@ -20,6 +21,9 @@ class Blueprint:
 
     def limits( self ):
         return self._limits
+
+    def configuration( self, nticks ):
+        return Configuration( nticks, self )
 
 
 class Configuration:
@@ -32,14 +36,15 @@ class Configuration:
 
 class Factory:
 
-    def __init__( self, *, factory=None, bluedata=None ):
+    def __init__( self, *, factory=None, configuration=None ):
         self._time = factory and factory._time or 0
         self._robots = factory and factory._robots.copy() or [1, 0, 0, 0]
         self._stocks = factory and factory._stocks.copy() or [0, 0, 0, 0]
         self._plan = factory and factory._plan
         self._score = factory and factory._score or 0
-        self._bluedata = factory and factory._bluedata or bluedata
-        self._limits = factory and factory._limits or tuple( max( robreq[n] for robreq in self._bluedata ) for n in range( 0, 4 ) )
+        # self._bluedata = factory and factory._bluedata or configuration.bluedata
+        # self._limits = factory and factory._limits or configuration.limits
+        self._configuration = factory and factory._configuration or configuration
 
     def score( self ):
         return self._stocks[ 3 ]
@@ -51,7 +56,7 @@ class Factory:
         return Factory( factory=self )
 
     def bestPossibleScore( self ):
-        time_remaining = max( 0, 24 - self._time )
+        time_remaining = max( 0, self._configuration.nticks - self._time )
         geode_makers = self._robots[3]
         # print( f'MOST time={time_remaining}: {self.altScore()} + {geode_makers * time_remaining} + {( ( time_remaining * ( time_remaining - 1 ) ) >> 1 )}' )
         return self.altScore() + ( geode_makers * time_remaining ) + ( ( time_remaining * ( time_remaining - 1 ) ) >> 1 )
@@ -59,7 +64,7 @@ class Factory:
     def round( self ):
         self._time += 1
         # Build a robot if possible.
-        requirements = self._bluedata[ self._plan ]
+        requirements = self._configuration.bluedata[ self._plan ]
         build = all( req <= got for ( req, got ) in zip( requirements, self._stocks ) )
         if build:
             for ( n, level ) in enumerate( self._stocks ):
@@ -81,11 +86,11 @@ class Factory:
                 yield self
         else:
             for i in range( 0, 4 ):
-                requirements = self._bluedata[ i ]
+                requirements = self._configuration.bluedata[ i ]
                 feasible = all( req == 0 or rob > 0 for ( req, rob ) in zip( requirements, self._robots ) )
                 # print( f'feasible to build {i}', [ req == 0 or rob > 0 for ( req, rob ) in zip( requirements, self._robots ) ], feasible )
                 if feasible:
-                    desirable = i == 3 or ( self._robots[ i ] < self._limits[ i ] )
+                    desirable = i == 3 or ( self._robots[ i ] < self._configuration.limits[ i ] )
                     # print( f'desireable to build {i}', i == 3, self._robots[ i ] < self._limits[ i ], desirable )
                     if desirable:
                         c = self.copy()
@@ -96,9 +101,6 @@ class Factory:
 
     def show( self ):
         print( self._time, self._plan, self._robots, self._stocks )
-
-
-
 
 
 class Simulation:
@@ -115,7 +117,7 @@ class Simulation:
             if geodes > self._best:
                 self._best = geodes
                 self._best_factory = f.copy()
-                self.show()
+                # self.show()
             self._Q.extend( f.oneStep() )
             # self.show()
 
@@ -129,6 +131,11 @@ class Simulation:
         while self._Q:
             self.tick()
         return self._best_factory
+
+
+################################################################################
+# Read
+################################################################################
 
 def readBlueprints( file ):
     for line in file:
