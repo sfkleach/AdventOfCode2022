@@ -1,3 +1,4 @@
+import re
 from collections import deque
 
 class Factory:
@@ -13,6 +14,7 @@ class Factory:
             ( 3, 14, 0, 0 ),
             ( 2, 0, 7, 0 )
         )
+        self._limits = tuple( max( robreq[n] for robreq in self._blueprint ) for n in range( 0, 4 ) )
 
     def copy( self ):
         c = Factory()
@@ -21,6 +23,7 @@ class Factory:
         c._stocks = list( self._stocks )
         c._plan = self._plan
         c._blueprint = self._blueprint
+        c._limits = self._limits
         return c
     
     def round( self ):
@@ -45,16 +48,18 @@ class Factory:
             if self._time <= 24:
                 yield self
         else:
-            for i in range( 0, 4 ):
+            for i in reversed( range( 0, 4 ) ):
                 requirements = self._blueprint[ i ]
                 feasible = all( req == 0 or rob > 0 for ( req, rob ) in zip( requirements, self._robots ) )
                 # print( f'feasible to build {i}', [ req == 0 or rob > 0 for ( req, rob ) in zip( requirements, self._robots ) ], feasible )
                 if feasible:
-                    c = self.copy()
-                    c._plan = i
-                    c.round()
-                    if c._time <= 24:
-                        yield c
+                    desirable = i == 3 or ( self._robots[ i ] < self._limits[ i ] )
+                    if desirable:
+                        c = self.copy()
+                        c._plan = i
+                        c.round()
+                        if c._time <= 24:
+                            yield c
 
 class Simulation:
 
@@ -80,3 +85,28 @@ class Simulation:
         while self._Q:
             self.tick()
 
+def readBlueprintsFile( fname ):
+    with open( fname, 'r' ) as file:
+        for line in file:
+            print( line )
+            bp_words = line.split( 'Each' )
+            bp = []
+            for w in bp_words[1:]:
+                robreq = []
+                m = re.match( r'[^0-9]+costs ([^.]*)', w )
+                assert bool( m )
+                for item in m[1].split( ' and '):
+                    ( n, mats ) = ( pair := item.split() )
+                    # print( 'Pair', pair )
+                    robreq.append( pair )
+                reqs = 4 * [ 0 ]
+                for ( i, mat) in enumerate( [ 'ore', 'clay', 'obsidian' ] ):
+                    req = 0
+                    for item in robreq:
+                        if item[1] == mat:
+                            reqs[ i ] = int( item[0] )
+                bp.append( tuple( reqs ) )
+            yield tuple( bp )
+
+
+                
