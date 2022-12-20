@@ -6,6 +6,7 @@ class Blueprint:
     def __init__( self, number, bluedata ):
         self._number = number
         self._bluedata = bluedata
+        self._limits = tuple( max( robreq[n] for robreq in self._bluedata ) for n in range( 0, 4 ) )
 
     def best( self ):
         S = Simulation( Factory( bluedata=self._bluedata ) )
@@ -14,6 +15,21 @@ class Blueprint:
     def quality( self ):
         return self._number * self.best()
 
+    def bluedata( self ):
+        return self._bluedata
+
+    def limits( self ):
+        return self._limits
+
+
+class Configuration:
+
+    def __init__( self, nticks, blueprint ):
+        self.nticks = nticks
+        self.bluedata = blueprint.bluedata()
+        self.limits = blueprint.limits()
+
+
 class Factory:
 
     def __init__( self, *, factory=None, bluedata=None ):
@@ -21,12 +37,25 @@ class Factory:
         self._robots = factory and factory._robots.copy() or [1, 0, 0, 0]
         self._stocks = factory and factory._stocks.copy() or [0, 0, 0, 0]
         self._plan = factory and factory._plan
+        self._score = factory and factory._score or 0
         self._bluedata = factory and factory._bluedata or bluedata
         self._limits = factory and factory._limits or tuple( max( robreq[n] for robreq in self._bluedata ) for n in range( 0, 4 ) )
 
+    def score( self ):
+        return self._stocks[ 3 ]
+
+    def altScore( self ):
+        return self._score
+
     def copy( self ):
         return Factory( factory=self )
-    
+
+    def bestPossibleScore( self ):
+        time_remaining = max( 0, 24 - self._time )
+        geode_makers = self._robots[3]
+        # print( f'MOST time={time_remaining}: {self.altScore()} + {geode_makers * time_remaining} + {( ( time_remaining * ( time_remaining - 1 ) ) >> 1 )}' )
+        return self.altScore() + ( geode_makers * time_remaining ) + ( ( time_remaining * ( time_remaining - 1 ) ) >> 1 )
+
     def round( self ):
         self._time += 1
         # Build a robot if possible.
@@ -41,6 +70,8 @@ class Factory:
         # Add the robot to the collection.
         if build:
             self._robots[ self._plan ] += 1
+            if self._plan == 3:
+                self._score += max( 0, 24 - self._time )
             self._plan = None
 
     def oneStep( self ):
@@ -63,30 +94,41 @@ class Factory:
                         if c._time <= 24:
                             yield c
 
+    def show( self ):
+        print( self._time, self._plan, self._robots, self._stocks )
+
+
+
+
+
 class Simulation:
 
     def __init__( self, factory ):
         self._Q = deque( [ factory.copy() ] )
         self._best = 0
+        self._best_factory = None
 
     def tick( self ):
         f = self._Q.pop()
-        geodes = f._stocks[3]
-        if geodes > self._best:
-            self._best = geodes
+        if f.bestPossibleScore() > self._best:
+            geodes = f._stocks[3]
+            if geodes > self._best:
+                self._best = geodes
+                self._best_factory = f.copy()
+                self.show()
+            self._Q.extend( f.oneStep() )
             # self.show()
-        self._Q.extend( f.oneStep() )
-        # self.show()
 
     def show( self ):
         print( 'Best:', self._best )
         for n, f in enumerate( self._Q ):
-            print( f'{n})', f._time, f._plan, f._robots, f._stocks )
+            print( f'{n})', end='' )
+            f.show()
 
     def run( self ):
         while self._Q:
             self.tick()
-        return self._best
+        return self._best_factory
 
 def readBlueprints( file ):
     for line in file:
