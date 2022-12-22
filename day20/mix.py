@@ -1,52 +1,35 @@
-
-class Link:
-
-    def __init__( self, value ):
-        self.value = value
-        self.prev = self
-        self.next = self
-
-
 class Mix:
 
     def __init__( self, data ):
-        self._items = tuple( data )
-        start = Link( 'DUMMY' )
-        latest = start
-        for d in data:
-            new = Link( d )
-            old = latest.next
-            latest.next = new
-            new.next = old
-            old.prev = new
-            new.prev = latest
-            latest = new
-        lhs = start.prev
-        rhs = start.next
-        lhs.next = rhs
-        rhs.prev = lhs
-        self._cycle = rhs
+        self._original_order = tuple( data )
+        self._items = list( data )
 
+    def __len__( self ):
+        return len( self._original_order )
+        
     def mv( self, item ):
-        A = self._cycle
-        for _ in range( 0, len( self._items ) ):
-            if A.value == item:
-                if item > 0:
-                    for i in range( 0, item ):
-                        lhs = A.prev
-                        B = A.next
-                        rhs = B.next
-                        A.prev = B
-                        A.next = rhs
-                        B.prev = lhs
-                        B.next = A
-                        lhs.next = B
-                        rhs.prev = A
-                elif item < 0:
-                    for i in range( 0, abs( item ) ):
-                        GOT HERE
+        N = len( self._items )
+        i = self.find( item )
+        ntransposes = item % (N-1)
+        for k in range( 0, ntransposes ):
+            self._items[(i+k)%N] = self._items[(i+k+1)%N]
+        self._items[(i + ntransposes)%N] = item
 
-                        
+    def mix( self ):
+        for item in self._original_order:
+            self.mv( item )
+
+    def find( self, item ):
+        N = len( self._items )
+        for i in range( 0, N ):
+            if self._items[i] == item:
+                return i
+
+    def lookup( self, index ):
+        base = self.find( 0 )
+        # print( index, ( base + index ), len( self ), ( base + index ) % len( self ), self._items[ ( base + index ) % len( self ) ] )
+        return self._items[ ( base + index ) % len( self ) ]
+
 
 def readMixFile( fname ):
     data = []
